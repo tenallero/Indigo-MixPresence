@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<PluginConfig>
+    <SupportURL>https://github.com/tenallero/Indigo-MixPresence</SupportURL>	
+		  
+     <Field id="space4" type="label">
+    	<Label/>
+     </Field>
+     
+     <Field type="checkbox" id="debugEnabled" defaultValue="false">
+		<Label>Enable debugging:</Label>
+		<Description>(not recommended)</Description>
+	 </Field>
+    
+     <Field id="space5" type="label">
+    	<Label/>
+     </Field>
+    
+</PluginConfig>
