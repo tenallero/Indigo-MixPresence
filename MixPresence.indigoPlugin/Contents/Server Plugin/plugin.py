@@ -218,7 +218,10 @@ class Plugin(indigo.PluginBase):
         onGeo3  = indigo.devices[geofencedevice3id].states["onOffState"]
         newValue = False
         
-        
+        if onUnifi:
+            pass
+        else:
+            pass
         
         
         
