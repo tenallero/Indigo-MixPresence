@@ -8,13 +8,14 @@ import indigo
 import math
 import decimal
 import datetime
+import time
 from ghpu import GitHubPluginUpdater
 
 class Plugin(indigo.PluginBase):
 
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
-        self.updater = GitHubPluginUpdater(self) #'tenallero', 'Indigo-MixPresence', self)
+        self.updater = GitHubPluginUpdater(self)
             
         self.apiVersion    = "2.0"
         self.localAddress  = ""
@@ -58,17 +59,30 @@ class Plugin(indigo.PluginBase):
             if device.id not in self.deviceList:   
                 statusNextTime = datetime.datetime.now() - datetime.timedelta(seconds=10)
                 statusInterval = 600 #device.pluginProps["statusInterval"]
-                self.deviceList[device.id] = {'ref':device, 'statusInterval':statusInterval, 'statusNextTime': statusNextTime, 'analyze': False, 'analyzeNextTime': statusNextTime, 'lastSeen': None, 'firstSeen': None}       
+                self.deviceList[device.id] = {
+                 'ref':device,
+                 'statusInterval':statusInterval, 
+                 'statusNextTime': statusNextTime,
+                 'analyze': False, 
+                 'analyzeNextTime': statusNextTime, 
+                 'lastSeen': 0, 
+                 'firstSeen': 0, 
+                 'onUnifi': False, 
+                 'onPing': False,
+                 'onGeo1': False,
+                 'onGeo2': False,
+                 'onGeo3': False
+                 }       
                 self.addDeviceToUpdateable(device)
 
     def addDeviceToUpdateable(self,device):
         unifideviceid     = int(device.pluginProps["unifidevice"])
-        pingdeviceid      = int(device.pluginProps["pingdevice"])
+        #pingdeviceid      = int(device.pluginProps["pingdevice"])
         geofencedevice1id = int(device.pluginProps["geofencedevice1"])
         geofencedevice2id = int(device.pluginProps["geofencedevice2"])
         geofencedevice3id = int(device.pluginProps["geofencedevice3"])
         self.updateableList[unifideviceid]     = {'parentDeviceId': device.id}
-        self.updateableList[pingdeviceid]      = {'parentDeviceId': device.id}
+        #self.updateableList[pingdeviceid]      = {'parentDeviceId': device.id}
         self.updateableList[geofencedevice1id] = {'parentDeviceId': device.id}
         self.updateableList[geofencedevice2id] = {'parentDeviceId': device.id}
         self.updateableList[geofencedevice3id] = {'parentDeviceId': device.id}
@@ -81,14 +95,14 @@ class Plugin(indigo.PluginBase):
 
     def deleteDeviceFromUpdateable(self,device):
         unifideviceid     = int(device.pluginProps["unifidevice"])
-        pingdeviceid      = int(device.pluginProps["pingdevice"])
+        #pingdeviceid      = int(device.pluginProps["pingdevice"])
         geofencedevice1id = int(device.pluginProps["geofencedevice1"])
         geofencedevice2id = int(device.pluginProps["geofencedevice2"])
         geofencedevice3id = int(device.pluginProps["geofencedevice3"])
         if unifideviceid in self.updateableList:
             del self.updateableList[unifideviceid]
-        if pingdeviceid in self.updateableList:
-            del self.updateableList[pingdeviceid]
+        #if pingdeviceid in self.updateableList:
+        #    del self.updateableList[pingdeviceid]
         if geofencedevice1id in self.updateableList:
             del self.updateableList[geofencedevice1id]    
         if geofencedevice2id in self.updateableList:
@@ -174,8 +188,14 @@ class Plugin(indigo.PluginBase):
         if origDev.id in self.updateableList:
             if not origDev.states['onOffState'] == newDev.states['onOffState']:
                 parentDeviceId = int(self.updateableList[origDev.id]["parentDeviceId"])
-                if parentDeviceId > 0:
-                    self.debugLog(u'"' + origDev.name + '" has been updated')
+                if parentDeviceId in self.deviceList:
+                    msg = u'device "' + origDev.name + u'" has been updated. Now is '
+                    if newDev.states['onOffState']:
+                        msg += u'on.'                       
+                    else:
+                        msg += u'off.'
+                    #self.debugLog(msg)
+                    indigo.server.log (msg)
                     self.deviceList[parentDeviceId]['statusNextTime'] = datetime.datetime.now() - datetime.timedelta(seconds=10)
     
     ###################################################################
@@ -203,7 +223,7 @@ class Plugin(indigo.PluginBase):
                                 indigoDevice = self.deviceList[presenceDevice]['ref']
                                 
                                 self.deviceList[presenceDevice]['analyze'] = True 
-                                self.deviceList[presenceDevice]['analyzeNextTime'] = todayNow + datetime.timedelta(seconds=4)    
+                                self.deviceList[presenceDevice]['analyzeNextTime'] = todayNow + datetime.timedelta(seconds=2)    
                                 self.debugLog(u'ConcurrentThread. Sent "' + indigoDevice.name + '" status request')                 
                                 self.deviceRequestStatus(indigoDevice)
                                 self.debugLog(u'ConcurrentThread. Received "' + indigoDevice.name + '" status')  
@@ -242,45 +262,105 @@ class Plugin(indigo.PluginBase):
     
     def deviceRequestStatus(self,device):
         unifideviceid     = int(device.pluginProps["unifidevice"])
-        pingdeviceid      = int(device.pluginProps["pingdevice"])
-        #self.pingPlugin.executeAction ("silentStatusRequest", deviceId=pingdeviceid)
+        #pingdeviceid      = int(device.pluginProps["pingdevice"])
+        
         self.unifiPlugin.executeAction("silentStatusRequest", deviceId=unifideviceid)
-        self.pingPlugin.executeAction ("silentStatusRequest", deviceId=pingdeviceid)
+        #self.pingPlugin.executeAction ("silentStatusRequest", deviceId=pingdeviceid)
  
     def deviceAnalyzeStatus(self,device):
+    
+        changeCause  = ""
+        changed      = False
+        changedUnifi = False
+        changedPing  = False
+        changedGeo1  = False
+        changedGeo2  = False
+        changedGeo3  = False
+        onOffState   = False
+        
         unifideviceid     = int(device.pluginProps["unifidevice"])
-        pingdeviceid      = int(device.pluginProps["pingdevice"])
+        #pingdeviceid      = int(device.pluginProps["pingdevice"])
         geofencedevice1id = int(device.pluginProps["geofencedevice1"])
         geofencedevice2id = int(device.pluginProps["geofencedevice2"])
         geofencedevice3id = int(device.pluginProps["geofencedevice3"])
         
-        onUnifi = indigo.devices[unifideviceid].states["onOffState"]
-        onPing  = indigo.devices[pingdeviceid].states["onOffState"]
+        onUnifi = indigo.devices[unifideviceid].states["onOffState"]     
+        #onPing  = indigo.devices[pingdeviceid].states["onOffState"]
         onGeo1  = indigo.devices[geofencedevice1id].states["onOffState"]
         onGeo2  = indigo.devices[geofencedevice2id].states["onOffState"]
         onGeo3  = indigo.devices[geofencedevice3id].states["onOffState"]
-        newValue = False
         
-        if onUnifi:
-            if onPing:
-                newValue = True
-            else:
-                if geofencedevice1id:
-                    pass
+        firstSeen  = int(indigo.devices[unifideviceid].states["firstSeen"])
+        lastSeen   = int(indigo.devices[unifideviceid].states["lastSeen"])
+       
+        if device.id in self.deviceList:
+            if not onUnifi == self.deviceList[device.id]['onUnifi']:
+                changedUnifi = True
+                changed      = True
+            #if not onPing == self.deviceList[device.id]['onPing']:
+            #    changedPing = True   
+            #    changed     = True             
+            if not onGeo1 == self.deviceList[device.id]['onGeo1']:
+                changedGeo1 = True
+                changed     = True
+            if not onGeo2 == self.deviceList[device.id]['onGeo2']:
+                changedGeo2 = True
+                changed     = True
+            if not onGeo3 == self.deviceList[device.id]['onGeo3']:
+                changedGeo3 = True
+                changed     = True
+            if not onUnifi == self.deviceList[device.id]['onUnifi']:
+                changedUnifi = True
+                changed      = True
+                                                                                
+            self.deviceList[device.id]['onUnifi']   = onUnifi
+            #self.deviceList[device.id]['onPing']    = onPing
+            self.deviceList[device.id]['onGeo1']    = onGeo1
+            self.deviceList[device.id]['onGeo2']    = onGeo2
+            self.deviceList[device.id]['onGeo3']    = onGeo3
+            self.deviceList[device.id]['firstSeen'] = firstSeen
+            self.deviceList[device.id]['lastSeen']  = lastSeen  
+       
+        now = int(time.time())
+        secondsOut = (now - lastSeen)
+        
+        
+        
+        
+        onOffState = device.states['onOffState']
+       
+        if changed:
+            if changedUnifi:
+                if onUnifi:
+                    onOffState = True
+                    changeCause = u"#1 Se ha conectado a la WIFI"
                 else:
-                    pass
+                    onOffState = False
+                    changeCause = u"#2 Se ha desconectado de la WIFI"
+            elif onOffState:
+                if changedGeo2 and not onGeo2:
+                    onOffState = False
+                    changeCause = u"#3 Ha salido de Plana Novella"
+                if changedGeo3 and not onGeo3:
+                    onOffState = False
+                    changeCause = u"#4 Ha salido del Parque Natural"                 
+            elif not onUnifi and changedGeo1 and onGeo1 and secondsOut > 1200:
+                onOffState = True 
+                changeCause = u"#5 Entra en CanTeula. No estaba conectado a la WIFI" 
         else:
-            pass
+            if not onOffState and onUnifi and secondsOut < 60:
+                onOffState = True
+                changeCause = u"#6 Estaba off, pero estaba conectado a la WIFI"
+            elif onOffState and secondsOut > 1200:
+                onOffState = False
+                changeCause = u"#7 Estaba on, pero hace mucho que no está conectado la WIFI"
         
-        
-        
-        if not newValue == device.states['onOffState']:
-            if newValue:
-                indigo.server.log ('"' + device.name + u'" is detected')        
+        if not onOffState == device.states['onOffState']:
+            if onOffState:
+                indigo.server.log (u'"' + device.name + u'" is IN  (' + changeCause + ')')        
             else:
-                indigo.server.log ('"' + device.name + u'" is out!')        
-            device.updateStateOnServer(key='onOffState', value=newValue)
-
+                indigo.server.log (u'"' + device.name + u'" is OUT  (' + changeCause + ')') 
+            device.updateStateOnServer(key='onOffState', value=onOffState)            
         
     ###################################################################
     # Custom Action callbacks
