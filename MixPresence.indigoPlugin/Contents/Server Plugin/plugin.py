@@ -261,21 +261,22 @@ class Plugin(indigo.PluginBase):
         newValue = False
         
         if onUnifi:
-            pass
+            if onPing:
+                newValue = True
+            else:
+                pass
         else:
             pass
         
         
         
         if not newValue == device.states['onOffState']:
-           device.updateStateOnServer(key='onOffState', value=newValue)
-           if newValue:
+            if newValue:
                 indigo.server.log ('"' + device.name + u'" is detected')        
-           else:
+            else:
                 indigo.server.log ('"' + device.name + u'" is out!')        
-           pass        
-        
-        
+            device.updateStateOnServer(key='onOffState', value=newValue)
+
         
     ###################################################################
     # Custom Action callbacks
