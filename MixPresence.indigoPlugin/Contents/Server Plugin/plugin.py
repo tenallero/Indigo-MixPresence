@@ -14,13 +14,14 @@ class Plugin(indigo.PluginBase):
 
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
-        self.updater = GitHubPluginUpdater('tenallero', 'Indigo-MixPresence', self)
+        self.updater = GitHubPluginUpdater(self) #'tenallero', 'Indigo-MixPresence', self)
             
         self.apiVersion    = "2.0"
         self.localAddress  = ""
 
         # create empty device list      
         self.deviceList = {}
+        self.updateableList = {}
         
         self.unifiPlugin = None
         self.pingPlugin = None
@@ -55,15 +56,45 @@ class Plugin(indigo.PluginBase):
     def addDeviceToList(self,device):
         if device:        
             if device.id not in self.deviceList:   
-                
-                checkNextTime = datetime.datetime.now() - datetime.timedelta(seconds=10)
-                checkInterval = 15 #device.pluginProps["checkInterval"]
-                self.deviceList[device.id] = {'ref':device, 'checkInterval':checkInterval, 'checkNextTime': checkNextTime, 'lastSeen': None, 'firstSeen': None}       
+                statusNextTime = datetime.datetime.now() - datetime.timedelta(seconds=10)
+                statusInterval = 600 #device.pluginProps["statusInterval"]
+                self.deviceList[device.id] = {'ref':device, 'statusInterval':statusInterval, 'statusNextTime': statusNextTime, 'analyze': False, 'analyzeNextTime': statusNextTime, 'lastSeen': None, 'firstSeen': None}       
+                self.addDeviceToUpdateable(device)
 
+    def addDeviceToUpdateable(self,device):
+        unifideviceid     = int(device.pluginProps["unifidevice"])
+        pingdeviceid      = int(device.pluginProps["pingdevice"])
+        geofencedevice1id = int(device.pluginProps["geofencedevice1"])
+        geofencedevice2id = int(device.pluginProps["geofencedevice2"])
+        geofencedevice3id = int(device.pluginProps["geofencedevice3"])
+        self.updateableList[unifideviceid]     = {'parentDeviceId': device.id}
+        self.updateableList[pingdeviceid]      = {'parentDeviceId': device.id}
+        self.updateableList[geofencedevice1id] = {'parentDeviceId': device.id}
+        self.updateableList[geofencedevice2id] = {'parentDeviceId': device.id}
+        self.updateableList[geofencedevice3id] = {'parentDeviceId': device.id}
+        
     def deleteDeviceFromList(self, device):
         if device:
             if device.id in self.deviceList:
                 del self.deviceList[device.id]
+                self.deleteDeviceFromUpdateable(device)
+
+    def deleteDeviceFromUpdateable(self,device):
+        unifideviceid     = int(device.pluginProps["unifidevice"])
+        pingdeviceid      = int(device.pluginProps["pingdevice"])
+        geofencedevice1id = int(device.pluginProps["geofencedevice1"])
+        geofencedevice2id = int(device.pluginProps["geofencedevice2"])
+        geofencedevice3id = int(device.pluginProps["geofencedevice3"])
+        if unifideviceid in self.updateableList:
+            del self.updateableList[unifideviceid]
+        if pingdeviceid in self.updateableList:
+            del self.updateableList[pingdeviceid]
+        if geofencedevice1id in self.updateableList:
+            del self.updateableList[geofencedevice1id]    
+        if geofencedevice2id in self.updateableList:
+            del self.updateableList[geofencedevice2id]
+        if geofencedevice3id in self.updateableList:
+            del self.updateableList[geofencedevice3id]
 
     def startup(self):
         self.loadPluginPrefs()
@@ -80,7 +111,7 @@ class Plugin(indigo.PluginBase):
         if not self.beaconPlugin.isEnabled():
             self.errorLog (u"Error: Beacon plugin is not enabled")        
         self.updater.checkForUpdate()
-        
+        indigo.devices.subscribeToChanges()
 
     def shutdown(self):
         self.debugLog(u"shutdown called")
@@ -119,7 +150,6 @@ class Plugin(indigo.PluginBase):
   
     
     def menuGetDevsUnifi(self, filter, valuesDict, typeId, elemId):
-        #self.debugLog(u"menuGetDevsUnifi ... ")
         menuList = []
         for dev in indigo.devices.iter(filter="com.tenallero.indigoplugin.unifi.unifiuser"):
             if dev.enabled:
@@ -127,24 +157,26 @@ class Plugin(indigo.PluginBase):
         return menuList
            
     def menuGetDevsPing(self, filter, valuesDict, typeId, elemId):
-        #self.debugLog(u"menuGetDevsPing ... ")
         menuList = []
         for dev in indigo.devices.iter(filter="com.tenallero.indigoplugin.ping.pingdevice"):
-            #self.debugLog(u"menuGetDevsPing ... " + dev.name)
             if dev.enabled:
                 menuList.append((dev.id, dev.name))
         return menuList  
          
     def menuGetDevsGeofence(self, filter, valuesDict, typeId, elemId):
-        #self.debugLog(u"menuGetDevsGeofence ... ")
         menuList = []
         for dev in indigo.devices.iter(filter="se.furtenbach.indigo.plugin.beacon.beacon"):
             if dev.enabled:
                 menuList.append((dev.id, dev.name))
         return menuList  
-               
-    
-    
+
+    def deviceUpdated (self, origDev, newDev):
+        if origDev.id in self.updateableList:
+            if not origDev.states['onOffState'] == newDev.states['onOffState']:
+                parentDeviceId = int(self.updateableList[origDev.id]["parentDeviceId"])
+                if parentDeviceId > 0:
+                    self.debugLog(u'"' + origDev.name + '" has been updated')
+                    self.deviceList[parentDeviceId]['statusNextTime'] = datetime.datetime.now() - datetime.timedelta(seconds=10)
     
     ###################################################################
     # Concurrent Thread.
@@ -160,16 +192,31 @@ class Plugin(indigo.PluginBase):
                 try:
                     todayNow = datetime.datetime.now()
                     for presenceDevice in self.deviceList:
-                        checkNextTime = self.deviceList[presenceDevice]['checkNextTime']
+                        if self.deviceList[presenceDevice]['statusInterval'] > 0:
+                            statusNextTime = self.deviceList[presenceDevice]['statusNextTime']
 
-                        if checkNextTime <= todayNow:                            
-                            checkInterval = self.deviceList[presenceDevice]['checkInterval']
-                            checkNextTime = todayNow + datetime.timedelta(seconds=int(checkInterval))
-                            self.deviceList[presenceDevice]['checkNextTime'] = checkNextTime                         
+                            if statusNextTime <= todayNow:                            
+                                statusInterval = self.deviceList[presenceDevice]['statusInterval']
+                                statusNextTime = todayNow + datetime.timedelta(seconds=int(statusInterval))
+                                self.deviceList[presenceDevice]['statusNextTime'] = statusNextTime                         
 
-                            indigoDevice = self.deviceList[presenceDevice]['ref']                           
-                            self.deviceRequestStatus(indigoDevice)
-                            
+                                indigoDevice = self.deviceList[presenceDevice]['ref']
+                                
+                                self.deviceList[presenceDevice]['analyze'] = True 
+                                self.deviceList[presenceDevice]['analyzeNextTime'] = todayNow + datetime.timedelta(seconds=4)    
+                                self.debugLog(u'ConcurrentThread. Sent "' + indigoDevice.name + '" status request')                 
+                                self.deviceRequestStatus(indigoDevice)
+                                self.debugLog(u'ConcurrentThread. Received "' + indigoDevice.name + '" status')  
+                        
+                        if self.deviceList[presenceDevice]['analyze']:  
+                            analyzeNextTime = self.deviceList[presenceDevice]['analyzeNextTime'] 
+                            if analyzeNextTime <= todayNow: 
+                                indigoDevice = self.deviceList[presenceDevice]['ref'] 
+                                self.debugLog(u'ConcurrentThread. Analyzing "' + indigoDevice.name + '"')   
+                                self.deviceList[presenceDevice]['analyze'] = False                        
+                                self.deviceAnalyzeStatus(indigoDevice)
+                        
+                        
                 except Exception,e:
                     self.errorLog (u"Error: " + str(e))
                     pass
@@ -191,20 +238,15 @@ class Plugin(indigo.PluginBase):
     # Presence logic
     ###################################################################
 
+
+    
     def deviceRequestStatus(self,device):
         unifideviceid     = int(device.pluginProps["unifidevice"])
         pingdeviceid      = int(device.pluginProps["pingdevice"])
-
         self.unifiPlugin.executeAction("silentStatusRequest", deviceId=unifideviceid)
         self.pingPlugin.executeAction ("silentStatusRequest", deviceId=pingdeviceid)
-
-        #indigo.device.statusRequest(unifideviceid,     suppressLogging=True)
-        #indigo.device.statusRequest(pingdeviceid,      suppressLogging=True)
-
-        self.deviceAnalyzeStatus(device)
-
+ 
     def deviceAnalyzeStatus(self,device):
-
         unifideviceid     = int(device.pluginProps["unifidevice"])
         pingdeviceid      = int(device.pluginProps["pingdevice"])
         geofencedevice1id = int(device.pluginProps["geofencedevice1"])
@@ -228,9 +270,9 @@ class Plugin(indigo.PluginBase):
         if not newValue == device.states['onOffState']:
            device.updateStateOnServer(key='onOffState', value=newValue)
            if newValue:
-                indigo.server.log (device.name + u" is detected")        
+                indigo.server.log ('"' + device.name + u'" is detected')        
            else:
-                indigo.server.log (device.name + u" is out!")        
+                indigo.server.log ('"' + device.name + u'" is out!')        
            pass        
         
         
@@ -241,10 +283,8 @@ class Plugin(indigo.PluginBase):
        
     def actionControlSensor(self, action, dev):
         if action.sensorAction == indigo.kSensorAction.RequestStatus:
-            self.deviceRequestStatus(dev)
             indigo.server.log ('sent "' + dev.name + '" status request')
-            pass
-            
+            self.deviceList[dev.id]['statusNextTime'] = datetime.datetime.now() - datetime.timedelta(seconds=10) 
             
     ########################################
     # Menu Methods

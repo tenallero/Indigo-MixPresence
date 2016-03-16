@@ -8,12 +8,7 @@
         
             <Field id="unifidevice" type="menu">
                 <Label>Unifi Device:</Label>
-                <!--
-                <List class="indigo.devices" filter="com.unifi.unifiuser"/>
-                -->
-                
                 <List class="self" method="menuGetDevsUnifi" dynamicReload="yes" />
-                
             </Field>
          
             <Field id="pingdevice" type="menu">
@@ -22,7 +17,7 @@
             </Field>
 
             <Field id="geofencedevice1" type="menu">
-                <Label>Geo Device:</Label>
+                <Label>Home Beacon Device:</Label>
                 <List class="self" method="menuGetDevsGeofence" dynamicReload="yes" />
             </Field>
             
@@ -37,25 +32,9 @@
             </Field>        
 
             
-             <Field type="checkbox" id="SupportsStatusRequest"       defaultValue="true" hidden="true" />
+            <Field type="checkbox" id="SupportsStatusRequest"       defaultValue="true" hidden="true" />
              
         </ConfigUI>
-        <UiDisplayStateId>state</UiDisplayStateId>
-        <States>
-            <State id="state" defaultValue="off">
-                <ValueType>
-                    <List>
-                        <Option value="on">on</Option>
-                        <Option value="off">off</Option>
-                    </List>
-                </ValueType>
-                <TriggerLabel>Presence changed</TriggerLabel>
-                <TriggerLabelPrefix>Device state is</TriggerLabelPrefix>
-                <ControlPageLabel>Device is</ControlPageLabel>
-                <ControlPageLabelPrefix>Device is</ControlPageLabelPrefix>
-            </State>
-            
-            
-        </States>
+        
     </Device>
 </Devices>
