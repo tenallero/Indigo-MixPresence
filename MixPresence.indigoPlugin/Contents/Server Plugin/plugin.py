@@ -223,7 +223,7 @@ class Plugin(indigo.PluginBase):
                                 indigoDevice = self.deviceList[presenceDevice]['ref']
                                 
                                 self.deviceList[presenceDevice]['analyze'] = True 
-                                self.deviceList[presenceDevice]['analyzeNextTime'] = todayNow + datetime.timedelta(seconds=2)    
+                                self.deviceList[presenceDevice]['analyzeNextTime'] = todayNow + datetime.timedelta(seconds=1)    
                                 self.debugLog(u'ConcurrentThread. Sent "' + indigoDevice.name + '" status request')                 
                                 self.deviceRequestStatus(indigoDevice)
                                 self.debugLog(u'ConcurrentThread. Received "' + indigoDevice.name + '" status')  
@@ -240,7 +240,7 @@ class Plugin(indigo.PluginBase):
                 except Exception,e:
                     self.errorLog (u"Error: " + str(e))
                     pass
-                self.sleep(1)
+                self.sleep(0.3)
             
 
         except self.StopThread:
@@ -268,7 +268,6 @@ class Plugin(indigo.PluginBase):
         #self.pingPlugin.executeAction ("silentStatusRequest", deviceId=pingdeviceid)
  
     def deviceAnalyzeStatus(self,device):
-    
         changeCause  = ""
         changed      = False
         changedUnifi = False
@@ -322,10 +321,7 @@ class Plugin(indigo.PluginBase):
             self.deviceList[device.id]['lastSeen']  = lastSeen  
        
         now = int(time.time())
-        secondsOut = (now - lastSeen)
-        
-        
-        
+        minutesOut = int((now - lastSeen) / 60)
         
         onOffState = device.states['onOffState']
        
@@ -344,14 +340,14 @@ class Plugin(indigo.PluginBase):
                 if changedGeo3 and not onGeo3:
                     onOffState = False
                     changeCause = u"#4 Ha salido del Parque Natural"                 
-            elif not onUnifi and changedGeo1 and onGeo1 and secondsOut > 1200:
+            elif not onUnifi and changedGeo1 and onGeo1 and minutesOut > 20:
                 onOffState = True 
                 changeCause = u"#5 Entra en CanTeula. No estaba conectado a la WIFI" 
         else:
-            if not onOffState and onUnifi and secondsOut < 60:
+            if not onOffState and onUnifi and minutesOut < 2:
                 onOffState = True
                 changeCause = u"#6 Estaba off, pero estaba conectado a la WIFI"
-            elif onOffState and secondsOut > 1200:
+            elif onOffState and secondminutesOutsOut > 20:
                 onOffState = False
                 changeCause = u"#7 Estaba on, pero hace mucho que no está conectado la WIFI"
         
