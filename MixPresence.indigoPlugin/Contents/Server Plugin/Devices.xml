@@ -11,7 +11,7 @@
                 <List class="self" method="menuGetDevsUnifi" dynamicReload="yes" />
             </Field>
          
-            <Field id="pingdevice" type="menu">
+            <Field id="pingdevice" type="menu" hidden="true">
                 <Label>Ping Device:</Label>
                 <List class="self" method="menuGetDevsPing" dynamicReload="yes" />
             </Field>

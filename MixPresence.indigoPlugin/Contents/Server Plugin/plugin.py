@@ -25,7 +25,7 @@ class Plugin(indigo.PluginBase):
         self.updateableList = {}
         
         self.unifiPlugin = None
-        self.pingPlugin = None
+        #self.pingPlugin = None
         self.beaconPlugin = None
         
     def __del__(self):
@@ -115,13 +115,13 @@ class Plugin(indigo.PluginBase):
         self.debugLog(u"startup called")
                 
         self.unifiPlugin  = indigo.server.getPlugin("com.tenallero.indigoplugin.unifi")
-        self.pingPlugin   = indigo.server.getPlugin("com.tenallero.indigoplugin.ping")
+        #self.pingPlugin   = indigo.server.getPlugin("com.tenallero.indigoplugin.ping")
         self.beaconPlugin = indigo.server.getPlugin("se.furtenbach.indigo.plugin.beacon")
         
         if not self.unifiPlugin.isEnabled():
             self.errorLog (u"Error: Unifi plugin is not enabled")
-        if not self.pingPlugin.isEnabled():
-            self.errorLog (u"Error: Ping plugin is not enabled")
+        #if not self.pingPlugin.isEnabled():
+        #    self.errorLog (u"Error: Ping plugin is not enabled")
         if not self.beaconPlugin.isEnabled():
             self.errorLog (u"Error: Beacon plugin is not enabled")        
         self.updater.checkForUpdate()
@@ -271,7 +271,7 @@ class Plugin(indigo.PluginBase):
         changeCause  = ""
         changed      = False
         changedUnifi = False
-        changedPing  = False
+        #changedPing  = False
         changedGeo1  = False
         changedGeo2  = False
         changedGeo3  = False
@@ -321,7 +321,7 @@ class Plugin(indigo.PluginBase):
             self.deviceList[device.id]['lastSeen']  = lastSeen  
        
         now = int(time.time())
-        minutesOut = int((now - lastSeen) / 60)
+        minutesLastSeen = int((now - lastSeen) / 60)
         
         onOffState = device.states['onOffState']
        
@@ -332,7 +332,7 @@ class Plugin(indigo.PluginBase):
                     changeCause = u"#1 Se ha conectado a la WIFI"
                 else:
                     onOffState = False
-                    changeCause = u"#2 Se ha desconectado de la WIFI"
+                    changeCause = u"#2 Se ha desconectado de la WIFI. Sin actividad durante " + str(minutesLastSeen) + " min."
             elif onOffState:
                 if changedGeo2 and not onGeo2:
                     onOffState = False
@@ -340,16 +340,16 @@ class Plugin(indigo.PluginBase):
                 if changedGeo3 and not onGeo3:
                     onOffState = False
                     changeCause = u"#4 Ha salido del Parque Natural"                 
-            elif not onUnifi and changedGeo1 and onGeo1 and minutesOut > 20:
+            elif not onUnifi and changedGeo1 and onGeo1 and minutesLastSeen > 20:
                 onOffState = True 
                 changeCause = u"#5 Entra en CanTeula. No estaba conectado a la WIFI" 
         else:
-            if not onOffState and onUnifi and minutesOut < 2:
+            if not onOffState and onUnifi and minutesLastSeen < 2:
                 onOffState = True
                 changeCause = u"#6 Estaba off, pero estaba conectado a la WIFI"
-            elif onOffState and secondminutesOutsOut > 20:
+            elif onOffState and minutesLastSeen > 20:
                 onOffState = False
-                changeCause = u"#7 Estaba on, pero hace mucho que no está conectado la WIFI"
+                changeCause = u"#7 Estaba on. Pero, sin actividad desde hace " + str(minutesLastSeen) + " min."
         
         if not onOffState == device.states['onOffState']:
             if onOffState:
