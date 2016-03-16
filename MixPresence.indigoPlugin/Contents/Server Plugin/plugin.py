@@ -243,7 +243,7 @@ class Plugin(indigo.PluginBase):
     def deviceRequestStatus(self,device):
         unifideviceid     = int(device.pluginProps["unifidevice"])
         pingdeviceid      = int(device.pluginProps["pingdevice"])
-        self.pingPlugin.executeAction ("silentStatusRequest", deviceId=pingdeviceid)
+        #self.pingPlugin.executeAction ("silentStatusRequest", deviceId=pingdeviceid)
         self.unifiPlugin.executeAction("silentStatusRequest", deviceId=unifideviceid)
         self.pingPlugin.executeAction ("silentStatusRequest", deviceId=pingdeviceid)
  
@@ -265,7 +265,10 @@ class Plugin(indigo.PluginBase):
             if onPing:
                 newValue = True
             else:
-                pass
+                if geofencedevice1id:
+                    pass
+                else:
+                    pass
         else:
             pass
         
