@@ -185,8 +185,8 @@ class Plugin(indigo.PluginBase):
                         msg += u'on.'                       
                     else:
                         msg += u'off.'
-                    #self.debugLog(msg)
-                    indigo.server.log (msg)
+                    self.debugLog(msg)
+                    #indigo.server.log (msg)
                     self.deviceList[parentDeviceId]['statusNextTime'] = datetime.datetime.now() - datetime.timedelta(seconds=10)
     
     ###################################################################
@@ -335,10 +335,10 @@ class Plugin(indigo.PluginBase):
             elif onOffState and minutesLastSeen > 15:
                 onOffState = False
                 changeCause = u"#8 Estaba IN. Pero, sin actividad desde hace " + str(int(minutesLastSeen)) + " min."
-            elif onOffState and not onUnifi and not onGeo1
+            elif onOffState and not onUnifi and not onGeo1:
                 onOffState = False
                 changeCause = u"#9 Estaba IN. No estaba conectado en WIFI. No estaba en Canteula." 
-            elif onOffState and not onUnifi and not onGeo2 and not onGeo3
+            elif onOffState and not onUnifi and not onGeo2 and not onGeo3:
                 onOffState = False
                 changeCause = u"#10 Estaba IN. No estaba conectado en WIFI. No estaba en Plana Novella ni Parque Natural." 
                     
