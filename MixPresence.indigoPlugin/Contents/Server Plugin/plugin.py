@@ -335,7 +335,7 @@ class Plugin(indigo.PluginBase):
             if not onOffState and onUnifi and minutesLastSeen < 3:
                 onOffState = True
                 changeCause = u"#7 Estaba OUT. Pero, ya estaba conectado a la WIFI"
-            elif onOffState and not onUnifi and onGeo1 and minutesOnGeo1 < 3 
+            elif onOffState and not onUnifi and onGeo1 and minutesOnGeo1 < 3:
                 onOffState = True
                 changeCause = u"#11 Estaba IN. Seguirá IN aunque no conectado a WIFI, pero si dentro perimetro CanTeula"
                 pass
