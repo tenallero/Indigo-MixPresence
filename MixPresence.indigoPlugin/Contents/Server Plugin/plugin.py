@@ -303,7 +303,7 @@ class Plugin(indigo.PluginBase):
         now = int(time.time())
         minutesLastSeen = (now - lastSeen) / 60
         
-        timeDelta = now - indigo.devices[geofencedevice1id].lastChanged
+        timeDelta = datetime.datetime.now() - indigo.devices[geofencedevice1id].lastChanged
         minutesOnGeo1 = (timeDelta.seconds) / 60
         
         
