@@ -303,8 +303,8 @@ class Plugin(indigo.PluginBase):
         now = int(time.time())
         minutesLastSeen = (now - lastSeen) / 60
         
-        timeDelta = datetime.now() - indigo.devices[geofencedevice1id].lastChanged
-        minutesOnGeo1 = (now - timeDelta.seconds) / 60
+        timeDelta = now - indigo.devices[geofencedevice1id].lastChanged
+        minutesOnGeo1 = (timeDelta.seconds) / 60
         
         
         onOffState = device.states['onOffState']
