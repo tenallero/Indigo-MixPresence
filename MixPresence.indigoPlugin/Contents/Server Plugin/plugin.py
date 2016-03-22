@@ -67,7 +67,6 @@ class Plugin(indigo.PluginBase):
                  'lastSeen': 0, 
                  'firstSeen': 0, 
                  'onUnifi': False, 
-                 'onPing': False,
                  'onGeo1': False,
                  'onGeo2': False,
                  'onGeo3': False
@@ -304,6 +303,10 @@ class Plugin(indigo.PluginBase):
         now = int(time.time())
         minutesLastSeen = (now - lastSeen) / 60
         
+        timeDelta = datetime.now() - indigo.devices[geofencedevice1id].lastChanged
+        minutesOnGeo1 = (now - timeDelta.seconds) / 60
+        
+        
         onOffState = device.states['onOffState']
        
         if changed:
@@ -332,6 +335,10 @@ class Plugin(indigo.PluginBase):
             if not onOffState and onUnifi and minutesLastSeen < 3:
                 onOffState = True
                 changeCause = u"#7 Estaba OUT. Pero, ya estaba conectado a la WIFI"
+            elif onOffState and not onUnifi and onGeo1 and minutesOnGeo1 < 3 
+                onOffState = True
+                changeCause = u"#11 Estaba IN. Seguirá IN aunque no conectado a WIFI, pero si dentro perimetro CanTeula"
+                pass
             elif onOffState and minutesLastSeen > 15:
                 onOffState = False
                 changeCause = u"#8 Estaba IN. Pero, sin actividad desde hace " + str(int(minutesLastSeen)) + " min."

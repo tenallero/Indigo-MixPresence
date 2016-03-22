@@ -17,17 +17,17 @@
             </Field>
 
             <Field id="geofencedevice1" type="menu">
-                <Label>Home Beacon Device:</Label>
+                <Label>1st. perimeter Beacon Device:</Label>
                 <List class="self" method="menuGetDevsGeofence" dynamicReload="yes" />
             </Field>
             
             <Field id="geofencedevice2" type="menu">
-                <Label>Beacon Device:</Label>
+                <Label>2nd. perimeter Beacon Device:</Label>
                 <List class="self" method="menuGetDevsGeofence" dynamicReload="yes" />
             </Field>
             
             <Field id="geofencedevice3" type="menu">
-                <Label>Beacon Device:</Label>
+                <Label>3rd. perimeter Beacon Device:</Label>
                 <List class="self" method="menuGetDevsGeofence" dynamicReload="yes" />
             </Field>        
 
