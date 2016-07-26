@@ -6,27 +6,27 @@
         <ConfigUI>
             <SupportURL>https://github.com/tenallero/Indigo-MixPresence</SupportURL>
         
-            <Field id="unifidevice" type="menu">
+            <Field id="unifidevice" type="menu" defaultValue="0">
                 <Label>Unifi Device:</Label>
                 <List class="self" method="menuGetDevsUnifi" dynamicReload="yes" />
             </Field>
          
-            <Field id="pingdevice" type="menu" hidden="true">
+            <Field id="pingdevice" type="menu" defaultValue="0" hidden="true">
                 <Label>Ping Device:</Label>
                 <List class="self" method="menuGetDevsPing" dynamicReload="yes" />
             </Field>
 
-            <Field id="geofencedevice1" type="menu">
+            <Field id="geofencedevice1" type="menu" defaultValue="0">
                 <Label>1st. perimeter Beacon Device:</Label>
                 <List class="self" method="menuGetDevsGeofence" dynamicReload="yes" />
             </Field>
             
-            <Field id="geofencedevice2" type="menu">
+            <Field id="geofencedevice2" type="menu" defaultValue="0">
                 <Label>2nd. perimeter Beacon Device:</Label>
                 <List class="self" method="menuGetDevsGeofence" dynamicReload="yes" />
             </Field>
             
-            <Field id="geofencedevice3" type="menu">
+            <Field id="geofencedevice3" type="menu" defaultValue="0">
                 <Label>3rd. perimeter Beacon Device:</Label>
                 <List class="self" method="menuGetDevsGeofence" dynamicReload="yes" />
             </Field>        

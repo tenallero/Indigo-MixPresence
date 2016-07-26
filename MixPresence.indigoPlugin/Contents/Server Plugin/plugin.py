@@ -45,13 +45,34 @@ class Plugin(indigo.PluginBase):
             self.deleteDeviceFromList(device)
 
     def deviceCreated(self, device):
-        indigo.server.log (u"Created new device \"%s\" of type \"%s\"" % (device.name, device.deviceTypeId))
-        pass
+        if device.deviceTypeId == "presence":
+            indigo.server.log (u"Created new device \"%s\" of type \"%s\"" % (device.name, device.deviceTypeId))
+            pass
         
     def deviceDeleted(self, device):
-        indigo.server.log (u"Deleted device \"%s\" of type \"%s\"" % (device.name, device.deviceTypeId))
         if device.id in self.deviceList:
-             del self.deviceList[device.id]
+            indigo.server.log (u"Deleted device \"%s\" of type \"%s\"" % (device.name, device.deviceTypeId))
+            self.deleteDeviceFromList(device)
+
+    def deviceUpdated (self, origDev, newDev):
+        if origDev.id > 0:
+            if origDev.deviceTypeId == 'presence':
+                indigo.server.log (u"Updated device \"%s\" of type \"%s\"" % (origDev.name, origDev.deviceTypeId))
+                self.deleteDeviceFromList(origDev)
+                self.addDeviceToList(newDev)
+                pass
+            if origDev.id in self.updateableList:
+                if not origDev.states['onOffState'] == newDev.states['onOffState']:
+                    parentDeviceId = int(self.updateableList[origDev.id]["parentDeviceId"])
+                    if parentDeviceId in self.deviceList:
+                        msg = u'device "' + origDev.name + u'" has been updated. Now is '
+                        if newDev.states['onOffState']:
+                            msg += u'on.'                       
+                        else:
+                            msg += u'off.'
+                        self.debugLog(msg)
+                        #indigo.server.log (msg)
+                        self.deviceList[parentDeviceId]['statusNextTime'] = datetime.datetime.now() - datetime.timedelta(seconds=10)
 
     def addDeviceToList(self,device):
         if device:        
@@ -73,21 +94,27 @@ class Plugin(indigo.PluginBase):
                  }       
                 self.addDeviceToUpdateable(device)
 
+    def deleteDeviceFromList(self, device):
+        if device:
+            if device.id in self.deviceList:
+                self.deleteDeviceFromUpdateable(device)
+                del self.deviceList[device.id]
+
     def addDeviceToUpdateable(self,device):
         unifideviceid     = int(device.pluginProps["unifidevice"])
         geofencedevice1id = int(device.pluginProps["geofencedevice1"])
         geofencedevice2id = int(device.pluginProps["geofencedevice2"])
         geofencedevice3id = int(device.pluginProps["geofencedevice3"])
-        self.updateableList[unifideviceid]     = {'parentDeviceId': device.id}
-        self.updateableList[geofencedevice1id] = {'parentDeviceId': device.id}
-        self.updateableList[geofencedevice2id] = {'parentDeviceId': device.id}
-        self.updateableList[geofencedevice3id] = {'parentDeviceId': device.id}
+        if unifideviceid > 0:
+            self.updateableList[unifideviceid]     = {'parentDeviceId': device.id}
+        if geofencedevice1id > 0:    
+            self.updateableList[geofencedevice1id] = {'parentDeviceId': device.id}
+        if geofencedevice2id > 0:
+            self.updateableList[geofencedevice2id] = {'parentDeviceId': device.id}
+        if geofencedevice3id > 0:
+            self.updateableList[geofencedevice3id] = {'parentDeviceId': device.id}
         
-    def deleteDeviceFromList(self, device):
-        if device:
-            if device.id in self.deviceList:
-                del self.deviceList[device.id]
-                self.deleteDeviceFromUpdateable(device)
+
 
     def deleteDeviceFromUpdateable(self,device):
         unifideviceid     = int(device.pluginProps["unifidevice"])
@@ -134,10 +161,11 @@ class Plugin(indigo.PluginBase):
 
     def closedDeviceConfigUi(self, valuesDict, userCancelled, typeId, devId):
         if userCancelled is False:
-            indigo.server.log ("Device preferences were updated.")
-            device = indigo.devices[devId]
-            self.deleteDeviceFromList (device)
-            self.addDeviceToList (device)
+            #indigo.server.log ("Device preferences were updated.")
+            #device = indigo.devices[devId]
+            #self.deleteDeviceFromList (device)
+            #self.addDeviceToList (device)
+            pass
 
     def closedPrefsConfigUi ( self, valuesDict, UserCancelled):
         #   If the user saves the preferences, reload the preferences
@@ -158,6 +186,7 @@ class Plugin(indigo.PluginBase):
         for dev in indigo.devices.iter(filter="com.tenallero.indigoplugin.unifi.unifiuser"):
             if dev.enabled:
                 menuList.append((dev.id, dev.name))
+        menuList.append((0,'(None)'))
         return menuList
            
     def menuGetDevsPing(self, filter, valuesDict, typeId, elemId):
@@ -165,6 +194,7 @@ class Plugin(indigo.PluginBase):
         for dev in indigo.devices.iter(filter="com.tenallero.indigoplugin.ping.pingdevice"):
             if dev.enabled:
                 menuList.append((dev.id, dev.name))
+        menuList.append((0,'(None)'))
         return menuList  
          
     def menuGetDevsGeofence(self, filter, valuesDict, typeId, elemId):
@@ -172,21 +202,8 @@ class Plugin(indigo.PluginBase):
         for dev in indigo.devices.iter(filter="se.furtenbach.indigo.plugin.beacon.beacon"):
             if dev.enabled:
                 menuList.append((dev.id, dev.name))
+        menuList.append((0,'(None)'))
         return menuList  
-
-    def deviceUpdated (self, origDev, newDev):
-        if origDev.id in self.updateableList:
-            if not origDev.states['onOffState'] == newDev.states['onOffState']:
-                parentDeviceId = int(self.updateableList[origDev.id]["parentDeviceId"])
-                if parentDeviceId in self.deviceList:
-                    msg = u'device "' + origDev.name + u'" has been updated. Now is '
-                    if newDev.states['onOffState']:
-                        msg += u'on.'                       
-                    else:
-                        msg += u'off.'
-                    self.debugLog(msg)
-                    #indigo.server.log (msg)
-                    self.deviceList[parentDeviceId]['statusNextTime'] = datetime.datetime.now() - datetime.timedelta(seconds=10)
     
     ###################################################################
     # Concurrent Thread.
